@@ -1,0 +1,11 @@
+spring:
+  application.name: aws-document
+
+aws:
+  credentials:
+    access-key: "test"
+    secret-key: "test"
+  s3:
+    bucket: oms-documents
+    endpoint: ${AWS_ENDPOINT:https://s3.amazonaws.com}
+    region: ${AWS_REGION:us-east-1}

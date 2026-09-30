@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @Service
 @Slf4j
@@ -30,13 +31,14 @@ public class S3StorageService {
         .build();
     try{
       s3Client.putObject(request, RequestBody.fromBytes(content));
+
       log.info("Upload successful — key: {}", key);
       return key;
 
-    }catch (Exception e){
+    }catch (S3Exception e){
       log.error("Failed to upload object to S3 — bucket: {}, key: {}, error: {}",
           bucket, key, e.getMessage());
-      throw new StorageException("Failed to upload file to storage: " +  e.getMessage());
+      throw new StorageException("Failed to upload file to storage: " ,  e);
     }
   }
 }

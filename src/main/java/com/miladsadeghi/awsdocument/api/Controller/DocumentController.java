@@ -1,8 +1,13 @@
 package com.miladsadeghi.awsdocument.api.Controller;
 
 import com.miladsadeghi.awsdocument.api.dto.DocumentUploadResponse;
+import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.usecase.DocumentUseCase;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,7 +27,23 @@ public class DocumentController {
   @PostMapping("/upload")
   public ResponseEntity<DocumentUploadResponse> upload(@RequestParam("file") MultipartFile file) {
     String key = documentUseCase.storeDocument(file);
-
     return ResponseEntity.ok(new DocumentUploadResponse(key, "Uploaded successfully"));
+  }
+
+  @GetMapping("/download/**")
+  public ResponseEntity<byte[]> download(HttpServletRequest request) {
+    String key = extractKey(request);
+    FileDownloadResult result = documentUseCase.downloadDocument(key);
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"" + result.filename() + "\"")
+        .contentType(MediaType.parseMediaType(result.contentType()))
+        .body(result.content());
+  }
+
+  private String extractKey(HttpServletRequest request) {
+    String path = request.getRequestURI();
+    return path.substring(path.indexOf("/download/") + "/download/".length());
   }
 }

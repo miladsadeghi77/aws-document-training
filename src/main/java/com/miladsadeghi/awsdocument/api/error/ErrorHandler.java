@@ -1,5 +1,6 @@
 package com.miladsadeghi.awsdocument.api.error;
 
+import com.miladsadeghi.awsdocument.domain.exception.DocumentNotFoundException;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+
 @Slf4j
 @RestControllerAdvice
 public class ErrorHandler {
@@ -23,6 +26,13 @@ public class ErrorHandler {
   public ResponseEntity<String> handleValidationException(IllegalArgumentException e) {
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
+        .body(e.getMessage());
+  }
+
+  @ExceptionHandler(DocumentNotFoundException.class)
+  public ResponseEntity<String> handleNotFound(DocumentNotFoundException e) {
+    return ResponseEntity
+        .status(HttpStatus.NOT_FOUND)
         .body(e.getMessage());
   }
 

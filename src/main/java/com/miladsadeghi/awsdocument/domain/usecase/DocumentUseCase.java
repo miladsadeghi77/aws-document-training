@@ -1,6 +1,7 @@
 package com.miladsadeghi.awsdocument.domain.usecase;
 
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
+import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
 import java.io.IOException;
 import java.util.UUID;
@@ -25,6 +26,13 @@ public class DocumentUseCase {
     } catch (IOException e) {
       throw new StorageException("Failed to read file content", e);
     }
+  }
+
+  public FileDownloadResult downloadDocument(String key) {
+    if (key == null || key.isBlank()) {
+      throw new IllegalArgumentException("Document key must not be empty");
+    }
+    return s3StorageService.download(key);
   }
 
   private void validateFile(MultipartFile file) {

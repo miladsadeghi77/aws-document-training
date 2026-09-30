@@ -1,11 +1,17 @@
 package com.miladsadeghi.awsdocument.domain.service;
 
+import com.miladsadeghi.awsdocument.domain.exception.DocumentNotFoundException;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
+import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
@@ -40,5 +46,36 @@ public class S3StorageService {
           bucket, key, e.getMessage());
       throw new StorageException("Failed to upload file to storage: " ,  e);
     }
+  }
+
+  public FileDownloadResult download(String key) {
+    log.info("Downloading object from S3 <UNK> bucket: {}, key: {}", bucket, key);
+    GetObjectRequest request = GetObjectRequest.builder()
+        .key(key)
+        .bucket(bucket)
+        .build();
+
+    try{
+      ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request);
+      String contentType = response.response().contentType();
+      String filename = extractFilename(key);
+      byte[] bytes = response.asByteArray();
+      log.info("Download successful key: {}, size: {} bytes", key, bytes.length);
+    return new FileDownloadResult(
+        bytes,
+        contentType,
+        filename
+    );
+    }catch (NoSuchKeyException e) {
+      log.warn("Object not found in S3 — bucket: {}, key: {}", bucket, key);
+      throw new DocumentNotFoundException("Document not found: " + key);
+    } catch (S3Exception e) {
+      log.error("Failed to download object from S3 — bucket: {}, key: {}, error: {}",
+          bucket, key, e.getMessage());
+      throw new StorageException("Failed to download file from storage", e);
+    }
+  }
+  private String extractFilename(String key) {
+    return key.substring(key.lastIndexOf("/") + 1);
   }
 }

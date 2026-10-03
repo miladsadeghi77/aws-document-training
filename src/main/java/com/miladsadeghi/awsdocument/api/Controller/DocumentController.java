@@ -50,6 +50,17 @@ public class DocumentController {
         .body(streamingResponseBody);
   }
 
+  @GetMapping("/presigned-download-url")
+  public ResponseEntity<String> getDownloadUrl(@RequestParam String key) {
+    String url = documentUseCase.getDownloadUrlDocument(key);
+    return ResponseEntity.ok(url);
+  }
+
+  @GetMapping("/presigned-upload-url")
+  public ResponseEntity<String> getUploadUrl(@RequestParam String filename) {
+    String url = documentUseCase.getUploadUrlDocument(filename);
+    return ResponseEntity.ok(url);
+  }
   private String extractKey(HttpServletRequest request) {
     String path = request.getRequestURI();
     return path.substring(path.indexOf("/download/") + "/download/".length());

@@ -4,6 +4,7 @@ import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +34,20 @@ public class DocumentUseCase {
       throw new IllegalArgumentException("Document key must not be empty");
     }
     return s3StorageService.download(key);
+  }
+  public String getDownloadUrlDocument(String key) {
+    if (key == null || key.isBlank()) {
+      throw new IllegalArgumentException("Document key must not be empty");
+    }
+    return s3StorageService.generateDownloadUrl(key , Duration.ofMinutes(10));
+  }
+
+  public String getUploadUrlDocument(String filename){
+    if (filename == null || filename.isBlank()) {
+      throw new IllegalArgumentException("Filename must not be empty");
+    }
+    String key = generateKey(filename);
+    return s3StorageService.generateUploadUrl(key, Duration.ofMinutes(10));
   }
 
   private void validateFile(MultipartFile file) {

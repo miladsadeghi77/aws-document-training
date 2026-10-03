@@ -107,7 +107,7 @@ public class S3StorageService {
         bucket, key, expiration);
     PutObjectPresignRequest request = PutObjectPresignRequest.builder()
         .signatureDuration(expiration)
-        .putObjectRequest(r -> r.bucket(bucket))
+        .putObjectRequest(r -> r.bucket(bucket).key(key))
         .build();
     PresignedPutObjectRequest presignedPutRequest = s3Presigner.presignPutObject(request);
     String url = presignedPutRequest.url().toString();

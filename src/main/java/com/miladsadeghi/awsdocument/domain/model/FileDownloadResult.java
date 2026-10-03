@@ -1,7 +1,9 @@
 package com.miladsadeghi.awsdocument.domain.model;
 
+import java.io.InputStream;
+
 public record FileDownloadResult(
-    byte[] content,
+    InputStream inputStream,
     String contentType,
     String filename
 ) {

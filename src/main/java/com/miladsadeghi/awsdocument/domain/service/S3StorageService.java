@@ -6,7 +6,7 @@ import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -56,13 +56,12 @@ public class S3StorageService {
         .build();
 
     try{
-      ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request);
-      String contentType = response.response().contentType();
+      ResponseInputStream<GetObjectResponse> responseStream = s3Client.getObject(request);
+      String contentType = responseStream.response().contentType();
       String filename = extractFilename(key);
-      byte[] bytes = response.asByteArray();
-      log.info("Download successful key: {}, size: {} bytes", key, bytes.length);
+      log.info("Download successful key: {}, size: {} bytes", key, responseStream.response().contentLength());
     return new FileDownloadResult(
-        bytes,
+        responseStream,
         contentType,
         filename
     );

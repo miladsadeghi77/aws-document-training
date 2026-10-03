@@ -4,6 +4,7 @@ import com.miladsadeghi.awsdocument.api.dto.DocumentUploadResponse;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.usecase.DocumentUseCase;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.InputStream;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -31,15 +33,21 @@ public class DocumentController {
   }
 
   @GetMapping("/download/**")
-  public ResponseEntity<byte[]> download(HttpServletRequest request) {
+  public ResponseEntity<StreamingResponseBody> download(HttpServletRequest request) {
     String key = extractKey(request);
     FileDownloadResult result = documentUseCase.downloadDocument(key);
+
+    StreamingResponseBody streamingResponseBody = out -> {
+      try(InputStream in = result.inputStream()) {
+        in.transferTo(out);
+      }
+    };
 
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"" + result.filename() + "\"")
         .contentType(MediaType.parseMediaType(result.contentType()))
-        .body(result.content());
+        .body(streamingResponseBody);
   }
 
   private String extractKey(HttpServletRequest request) {

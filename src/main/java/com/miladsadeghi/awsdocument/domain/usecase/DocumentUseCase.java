@@ -3,9 +3,11 @@ package com.miladsadeghi.awsdocument.domain.usecase;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
+import com.miladsadeghi.awsdocument.infrastracture.service.publisher.SqsMessagePublisher;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,9 +15,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentUseCase {
 
   private final S3StorageService s3StorageService;
+  private final SqsMessagePublisher sqsMessagePublisher;
+  private final String bucket;
 
-  public DocumentUseCase(S3StorageService s3StorageService) {
+  public DocumentUseCase(S3StorageService s3StorageService, SqsMessagePublisher sqsMessagePublisher,
+      @Value("${aws.s3.bucket}")  String bucket) {
     this.s3StorageService = s3StorageService;
+    this.sqsMessagePublisher = sqsMessagePublisher;
+    this.bucket = bucket;
   }
 
   public String storeDocument(MultipartFile file) {
@@ -23,7 +30,9 @@ public class DocumentUseCase {
 
     String key = generateKey(file.getOriginalFilename());
     try {
-      return s3StorageService.upload(key, file.getBytes(), file.getContentType());
+      String uploadedKey = s3StorageService.upload(key, file.getBytes(), file.getContentType());
+      sqsMessagePublisher.publishDocumentUploaded(uploadedKey, bucket);
+      return uploadedKey;
     } catch (IOException e) {
       throw new StorageException("Failed to read file content", e);
     }

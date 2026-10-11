@@ -1,7 +1,10 @@
+
 spring:
   application.name: aws-document
 
 aws:
+  sqs:
+    queue-url: ${SQS_QUEUE_URL:http://localhost:4566/000000000000/oms-documents}
   credentials:
     access-key: "test"
     secret-key: "test"
@@ -9,3 +12,5 @@ aws:
     bucket: oms-documents
     endpoint: ${AWS_ENDPOINT:https://s3.amazonaws.com}
     region: ${AWS_REGION:us-east-1}
+server:
+  port: 8088

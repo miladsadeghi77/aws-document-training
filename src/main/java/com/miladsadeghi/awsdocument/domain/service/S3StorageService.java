@@ -60,7 +60,7 @@ public class S3StorageService {
   }
 
   public FileDownloadResult download(String key) {
-    log.info("Downloading object from S3 <UNK> bucket: {}, key: {}", bucket, key);
+    log.info("Downloading object from S3 bucket: {}, key: {}", bucket, key);
     GetObjectRequest request = GetObjectRequest.builder()
         .key(key)
         .bucket(bucket)

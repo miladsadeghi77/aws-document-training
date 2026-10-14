@@ -1,6 +1,8 @@
 package com.miladsadeghi.awsdocument.infrastracture.service.consumer;
 
 
+import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
+import com.miladsadeghi.awsdocument.domain.service.DocumentProcessor;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +12,8 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @Slf4j
@@ -17,10 +21,16 @@ public class DocumentProcessingConsumer {
 
   private final SqsClient sqsClient;
   private final String queueUrl;
+  private final ObjectMapper objectMapper;
+  private final DocumentProcessor documentProcessor;
 
   public DocumentProcessingConsumer(SqsClient sqsClient,
+      ObjectMapper objectMapper,
+      DocumentProcessor documentProcessor,
       @Value("${aws.sqs.queue-url}") String queueUrl) {
     this.sqsClient = sqsClient;
+    this.objectMapper = objectMapper;
+    this.documentProcessor = documentProcessor;
     this.queueUrl = queueUrl;
   }
 
@@ -42,14 +52,18 @@ public class DocumentProcessingConsumer {
   private void processMessage(Message message) {
     log.info("Processing message — messageId: {}", message.messageId());
     try {
-      log.info("Message body: {}", message.body());
+      DocumentUploadedEvent event = objectMapper.readValue(message.body(),
+          DocumentUploadedEvent.class);
 
-      // TODO: deserialize and process the event
-
+      documentProcessor.process(event);
       deleteMessage(message.receiptHandle());
       log.info("Message processed and deleted — messageId: {}", message.messageId());
 
-    } catch (Exception e) {
+    } catch (JacksonException e) {
+      log.error("Failed to deserialize message — messageId: {}", message.messageId());
+      deleteMessage(message.receiptHandle());
+
+    }catch (Exception e) {
       log.error("Failed to process message — messageId: {}, error: {}",
           message.messageId(), e.getMessage());
       // do NOT delete — let visibility timeout expire → SQS retries

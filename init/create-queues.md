@@ -6,3 +6,6 @@ awslocal sqs get-queue-attributes `
 awslocal sqs create-queue `
   --queue-name oms-documents `
   --attributes '{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"arn:aws:sqs:us-east-1:000000000000:oms-documents-dlq\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}'
+
+awslocal sqs create-queue --queue-name oms-email-notifications
+awslocal sqs create-queue --queue-name oms-analytics

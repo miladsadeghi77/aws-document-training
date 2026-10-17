@@ -60,7 +60,7 @@ public class S3StorageService {
   }
 
   public FileDownloadResult download(String key) {
-    log.info("Downloading object from S3 <UNK> bucket: {}, key: {}", bucket, key);
+    log.info("Downloading object from S3 bucket: {}, key: {}", bucket, key);
     GetObjectRequest request = GetObjectRequest.builder()
         .key(key)
         .bucket(bucket)
@@ -107,7 +107,7 @@ public class S3StorageService {
         bucket, key, expiration);
     PutObjectPresignRequest request = PutObjectPresignRequest.builder()
         .signatureDuration(expiration)
-        .putObjectRequest(r -> r.bucket(bucket))
+        .putObjectRequest(r -> r.bucket(bucket).key(key))
         .build();
     PresignedPutObjectRequest presignedPutRequest = s3Presigner.presignPutObject(request);
     String url = presignedPutRequest.url().toString();

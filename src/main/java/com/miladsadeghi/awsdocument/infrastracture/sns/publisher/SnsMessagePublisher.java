@@ -1,4 +1,4 @@
-package com.miladsadeghi.awsdocument.infrastracture.service.publisher;
+package com.miladsadeghi.awsdocument.infrastracture.sns.publisher;
 
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;

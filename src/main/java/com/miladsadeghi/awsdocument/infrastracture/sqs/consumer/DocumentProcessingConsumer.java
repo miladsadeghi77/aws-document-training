@@ -1,8 +1,8 @@
-package com.miladsadeghi.awsdocument.infrastracture.service.consumer;
+package com.miladsadeghi.awsdocument.infrastracture.sqs.consumer;
 
 
 import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
-import com.miladsadeghi.awsdocument.domain.model.SnsEnvelope;
+import com.miladsadeghi.awsdocument.infrastracture.sns.model.SnsEnvelope;
 import com.miladsadeghi.awsdocument.domain.service.DocumentProcessor;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

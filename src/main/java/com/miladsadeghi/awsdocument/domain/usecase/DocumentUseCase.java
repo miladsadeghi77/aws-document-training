@@ -3,7 +3,7 @@ package com.miladsadeghi.awsdocument.domain.usecase;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
-import com.miladsadeghi.awsdocument.infrastracture.service.publisher.SnsMessagePublisher;
+import com.miladsadeghi.awsdocument.infrastracture.sns.publisher.SnsMessagePublisher;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;

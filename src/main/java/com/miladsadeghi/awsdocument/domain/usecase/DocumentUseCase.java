@@ -1,38 +1,69 @@
 package com.miladsadeghi.awsdocument.domain.usecase;
 
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
+import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
-import com.miladsadeghi.awsdocument.infrastracture.sns.publisher.SnsMessagePublisher;
+import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.Document;
+import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.OutboxEvent;
+import com.miladsadeghi.awsdocument.infrastracture.persistance.repository.DocumentRepository;
+import com.miladsadeghi.awsdocument.infrastracture.persistance.repository.OutboxEventRepository;
+import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
+@Slf4j
 public class DocumentUseCase {
 
   private final S3StorageService s3StorageService;
-  private final SnsMessagePublisher snsMessagePublisher;
+  private final DocumentRepository documentRepository;
+  private final OutboxEventRepository outboxEventRepository;
+  private final ObjectMapper objectMapper;
   private final String bucket;
 
-  public DocumentUseCase(S3StorageService s3StorageService, SnsMessagePublisher snsMessagePublisher,
+  public DocumentUseCase(
+      S3StorageService s3StorageService,
+      DocumentRepository documentRepository,
+      OutboxEventRepository outboxEventRepository,
+      ObjectMapper objectMapper,
       @Value("${aws.s3.bucket}")  String bucket) {
+
     this.s3StorageService = s3StorageService;
-    this.snsMessagePublisher = snsMessagePublisher;
+    this.documentRepository = documentRepository;
+    this.outboxEventRepository = outboxEventRepository;
     this.bucket = bucket;
+    this.objectMapper = objectMapper;
   }
 
+  @Transactional
   public String storeDocument(MultipartFile file) {
     validateFile(file);
 
     String key = generateKey(file.getOriginalFilename());
     try {
+      // Write 1: S3 upload
       String uploadedKey = s3StorageService.upload(key, file.getBytes(), file.getContentType());
-      snsMessagePublisher.publishDocumentUploaded(uploadedKey, bucket);
-      return uploadedKey;
+
+      // Write 2 + 3: single DB transaction
+      Document document = new Document(uploadedKey, bucket, file.getOriginalFilename());
+      documentRepository.save(document);
+
+      DocumentUploadedEvent event = new DocumentUploadedEvent(uploadedKey, bucket,
+          Instant.now().toString());
+
+      String payload = objectMapper.writeValueAsString(event); // Serialize to JSON
+      outboxEventRepository.save(new OutboxEvent("DocumentUploaded", payload));
+      log.info("Document saved and outbox event created — key: {}", key);
+      return key;
+
     } catch (IOException e) {
       throw new StorageException("Failed to read file content", e);
     }

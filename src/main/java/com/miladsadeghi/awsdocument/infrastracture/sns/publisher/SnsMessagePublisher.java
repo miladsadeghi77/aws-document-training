@@ -54,4 +54,15 @@ public class SnsMessagePublisher {
       throw new StorageException("Failed to publish document event", e);
     }
   }
+
+  public void publishRawMessage(String payload) throws SnsException {
+      PublishRequest request = PublishRequest.builder()
+          .topicArn(topicArn)
+          .message(payload)
+          .subject("DocumentUploaded")
+          .build();
+
+      PublishResponse response = snsClient.publish(request);
+      log.info("Raw message published to SNS — messageId: {}", response.messageId());
+  }
 }

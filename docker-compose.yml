@@ -15,6 +15,17 @@ services:
     volumes:
       - ./init:/etc/localstack/init/ready.d
       - /var/run/docker.sock:/var/run/docker.sock
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: oms
+      POSTGRES_USER: oms
+      POSTGRES_PASSWORD: oms
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
   localstack-data:
+  postgres_data:

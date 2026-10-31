@@ -42,11 +42,13 @@ public class OutboxEvent {
   private int retryCount = 0;
 
   private Instant lastRetriedAt;
+  private String correlationId;
 
-  public OutboxEvent(String eventType, String payload) {
+  public OutboxEvent(String eventType, String payload, String correlationId) {
     this.eventType = eventType;
     this.payload = payload;
     this.status = OutboxStatus.PENDING;
     this.createdAt = Instant.now();
+    this.correlationId = correlationId;
   }
 }

@@ -1,6 +1,12 @@
-
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-}]"
 spring:
   application.name: aws-document
+  task:
+    scheduling:
+      pool:
+        size: 3
   datasource:
     url: jdbc:postgresql://localhost:5436/oms
     username: oms

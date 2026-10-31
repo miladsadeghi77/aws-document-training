@@ -1,5 +1,6 @@
 package com.miladsadeghi.awsdocument.domain.usecase;
 
+import com.miladsadeghi.awsdocument.common.logging.CorrelationContext;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,11 +58,12 @@ public class DocumentUseCase {
       Document document = new Document(uploadedKey, bucket, file.getOriginalFilename());
       documentRepository.save(document);
 
+      String correlationId = MDC.get(CorrelationContext.MDC_KEY);
       DocumentUploadedEvent event = new DocumentUploadedEvent(uploadedKey, bucket,
-          Instant.now().toString());
+          Instant.now().toString(), correlationId);
 
       String payload = objectMapper.writeValueAsString(event); // Serialize to JSON
-      outboxEventRepository.save(new OutboxEvent("DocumentUploaded", payload));
+      outboxEventRepository.save(new OutboxEvent("DocumentUploaded", payload, correlationId));
       log.info("Document saved and outbox event created — key: {}", key);
       return key;
 

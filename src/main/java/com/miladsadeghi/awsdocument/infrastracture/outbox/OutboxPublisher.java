@@ -1,5 +1,6 @@
 package com.miladsadeghi.awsdocument.infrastracture.outbox;
 
+import com.miladsadeghi.awsdocument.common.logging.CorrelationContext;
 import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.OutboxEvent;
 import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.OutboxStatus;
 import com.miladsadeghi.awsdocument.infrastracture.persistance.repository.OutboxEventRepository;
@@ -8,6 +9,7 @@ import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.sns.model.SnsException;
@@ -36,6 +38,7 @@ public class OutboxPublisher {
     log.info("Found {} pending outbox events", pendingEvents.size());
 
     for (OutboxEvent event : pendingEvents) {
+      MDC.put(CorrelationContext.MDC_KEY, event.getCorrelationId());
       try {
         snsMessagePublisher.publishRawMessage(event.getPayload());
         event.setStatus(OutboxStatus.PUBLISHED);
@@ -50,6 +53,7 @@ public class OutboxPublisher {
       } finally {
         try {
           outboxEventRepository.save(event);
+          MDC.remove(CorrelationContext.MDC_KEY);
         } catch (Exception dbEx) {
           log.error("Failed to update outbox event status — id: {}",
               event.getId(), dbEx);
@@ -64,6 +68,7 @@ public class OutboxPublisher {
     List<OutboxEvent> retryableEvents =
         outboxEventRepository.findByStatusAndRetryCountLessThan(OutboxStatus.FAILED, 3);
     for (OutboxEvent event : retryableEvents) {
+      MDC.put(CorrelationContext.MDC_KEY, event.getCorrelationId());
       try {
         snsMessagePublisher.publishRawMessage(event.getPayload());
         event.setStatus(OutboxStatus.PUBLISHED);
@@ -79,6 +84,7 @@ public class OutboxPublisher {
       } finally {
         try {
           outboxEventRepository.save(event);
+          MDC.remove(CorrelationContext.MDC_KEY);
         } catch (Exception dbEx) {
           log.error("Failed to save outbox event — id: {}", event.getId(), dbEx);
         }

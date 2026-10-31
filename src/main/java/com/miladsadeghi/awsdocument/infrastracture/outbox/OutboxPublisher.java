@@ -68,9 +68,7 @@ public class OutboxPublisher {
         snsMessagePublisher.publishRawMessage(event.getPayload());
         event.setStatus(OutboxStatus.PUBLISHED);
         event.setLastRetriedAt(Instant.now());
-        event.setRetryCount(event.getRetryCount() + 1);
         log.info("Retried outbox event — id: {}", event.getId());
-
       } catch (Exception e) {
         log.error("Retry failed — id: {}", event.getId(), e);
         event.setRetryCount(event.getRetryCount() + 1);

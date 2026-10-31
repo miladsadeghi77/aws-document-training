@@ -2,7 +2,7 @@
 spring:
   application.name: aws-document
   datasource:
-    url: jdbc:postgresql://localhost:5432/oms
+    url: jdbc:postgresql://localhost:5436/oms
     username: oms
     password: oms
   jpa:

@@ -1,7 +1,20 @@
-
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-}]"
 spring:
   application.name: aws-document
-
+  task:
+    scheduling:
+      pool:
+        size: 3
+  datasource:
+    url: jdbc:postgresql://localhost:5436/oms
+    username: oms
+    password: oms
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
 aws:
   sns:
     topic-arn: ${SNS_TOPIC_ARN:arn:aws:sns:us-east-1:000000000000:oms-document-uploaded}

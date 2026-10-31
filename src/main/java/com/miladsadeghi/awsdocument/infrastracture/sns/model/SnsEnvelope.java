@@ -1,4 +1,4 @@
-package com.miladsadeghi.awsdocument.domain.model;
+package com.miladsadeghi.awsdocument.infrastracture.sns.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -1,11 +1,13 @@
-package com.miladsadeghi.awsdocument.infrastracture.service.consumer;
+package com.miladsadeghi.awsdocument.infrastracture.sqs.consumer;
 
 
+import com.miladsadeghi.awsdocument.common.logging.CorrelationContext;
 import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
-import com.miladsadeghi.awsdocument.domain.model.SnsEnvelope;
 import com.miladsadeghi.awsdocument.domain.service.DocumentProcessor;
+import com.miladsadeghi.awsdocument.infrastracture.sns.model.SnsEnvelope;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,7 @@ public class DocumentProcessingConsumer {
   }
 
   private void processMessage(Message message) {
+    MDC.put(CorrelationContext.MDC_KEY, "sqs-" + message.messageId());
     log.info("Processing message — messageId: {}", message.messageId());
     try {
       // unwrap SNS envelope
@@ -60,6 +63,9 @@ public class DocumentProcessingConsumer {
 
       DocumentUploadedEvent event = objectMapper.readValue(envelope.message(),
           DocumentUploadedEvent.class);
+      if (event.correlationId() != null) {
+        MDC.put(CorrelationContext.MDC_KEY, event.correlationId());   // real ID
+      }
 
       documentProcessor.process(event);
       deleteMessage(message.receiptHandle());
@@ -73,6 +79,8 @@ public class DocumentProcessingConsumer {
       log.error("Failed to process message — messageId: {}, error: {}",
           message.messageId(), e.getMessage());
       // do NOT delete — let visibility timeout expire → SQS retries
+    } finally {
+      MDC.remove(CorrelationContext.MDC_KEY);
     }
   }
 

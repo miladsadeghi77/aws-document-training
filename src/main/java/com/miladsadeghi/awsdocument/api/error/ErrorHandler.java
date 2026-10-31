@@ -1,54 +1,58 @@
 package com.miladsadeghi.awsdocument.api.error;
 
+import com.miladsadeghi.awsdocument.common.logging.CorrelationContext;
 import com.miladsadeghi.awsdocument.domain.exception.DocumentNotFoundException;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 @Slf4j
 @RestControllerAdvice
 public class ErrorHandler {
 
   @ExceptionHandler(StorageException.class)
-  public ResponseEntity<String> handleStorageException(StorageException e) {
-    log.error("Storage failure: {}", e.getMessage(), e);
+  public ResponseEntity<ErrorResponse> handleStorageException(StorageException e) {
+
+    log.error("Storage failure: {} ", e.getMessage(), e);
     return ResponseEntity
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body("Storage operation failed. Please try again later.");
+        .body(new ErrorResponse("Storage operation failed. Please try again later.",
+            MDC.get(CorrelationContext.MDC_KEY)));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<String> handleValidationException(IllegalArgumentException e) {
+  public ResponseEntity<ErrorResponse> handleValidationException(IllegalArgumentException e) {
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
-        .body(e.getMessage());
+        .body(new ErrorResponse(e.getMessage() ,MDC.get(CorrelationContext.MDC_KEY)) );
   }
 
   @ExceptionHandler(DocumentNotFoundException.class)
-  public ResponseEntity<String> handleNotFound(DocumentNotFoundException e) {
+  public ResponseEntity<ErrorResponse> handleNotFound(DocumentNotFoundException e) {
     return ResponseEntity
         .status(HttpStatus.NOT_FOUND)
-        .body(e.getMessage());
+        .body(new ErrorResponse(e.getMessage(),MDC.get(CorrelationContext.MDC_KEY)));
   }
 
   @ExceptionHandler(IOException.class)
-  public ResponseEntity<String> handleGenericIOException(Exception e) {
+  public ResponseEntity<ErrorResponse> handleGenericIOException(Exception e) {
     log.error("Content of file isn't correct: {}", e.getMessage(), e);
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
-        .body("Content of file isn't correct");
+        .body(new ErrorResponse("Content of file isn't correct",MDC.get(CorrelationContext.MDC_KEY)));
   }
 
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<String> handleGenericException(Exception e) {
+  public ResponseEntity<ErrorResponse> handleGenericException(Exception e) {
     log.error("Unexpected error: {}", e.getMessage(), e);
     return ResponseEntity
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body("An unexpected error occurred.");
+        .body(new ErrorResponse("An unexpected error occurred.",MDC.get(CorrelationContext.MDC_KEY)));
+
   }
 }

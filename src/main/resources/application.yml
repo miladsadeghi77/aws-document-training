@@ -27,5 +27,7 @@ aws:
     bucket: oms-documents
     endpoint: ${AWS_ENDPOINT:https://s3.amazonaws.com}
     region: ${AWS_REGION:us-east-1}
+  dynamodb:
+    table-name: oms-document-processing
 server:
   port: 8088

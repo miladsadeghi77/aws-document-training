@@ -24,7 +24,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
 
     String correlationId = request.getHeader(HEADER);
     if (correlationId == null || !VALID_ID.matcher(correlationId).matches()) {
-      correlationId = UUID.randomUUID().toString();
+      correlationId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     }
     MDC.put(MDC_KEY, correlationId);
     response.setHeader(HEADER, correlationId);

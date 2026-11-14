@@ -44,30 +44,22 @@ The project integrates with AWS services using **AWS SDK v2**, developed and tes
 
 ## AWS Services Covered
 
-| Service                                             | Status                |
-|-----------------------------------------------------|-----------------------|
-| S3: Upload, Download, Streaming, Presigned URLs     | ✅ Complete            |
-| SQS: Async messaging, DLQ, Long polling             | ✅ Complete            |
-| SNS: Pub/Sub, Fan-out pattern, Envelope unwrapping  | ✅ Complete            |
-| Event-driven patterns: Outbox, Correlation IDs/MDC  | ✅ Complete            |
-| DynamoDB                                            | 🔄 Next               |
-| RDS with Spring Boot                                | ⬜ Pending             |
-| Spring Cloud AWS                                    | ⬜ Pending             |
-| Secrets Manager                                     | ⬜ Pending             |
-| Parameter Store                                     | ⬜ Pending             |
-| Lambda                                              | ⬜ Pending             |
-| API Gateway                                         | ⬜ Pending             |
-| CloudWatch                                          | ⬜ Pending             |
+| Service                                                     | Status         |
+|-------------------------------------------------------------|----------------|
+| S3: Upload, Download, Streaming, Presigned URLs             | ✅ Complete     |
+| SQS: Async messaging, DLQ, Long polling                     | ✅ Complete     |
+| SNS: Pub/Sub, Fan-out pattern, Envelope unwrapping          | ✅ Complete     |
+| Event-driven patterns: Outbox, Correlation IDs/MDC          | ✅ Complete     |
+| DynamoDB: Key design, Query vs Scan, GSI, Idempotency       | ✅ Complete     |
+| RDS with Spring Boot (PostgreSQL)                           | 🔄 In progress |
+| ElastiCache (Redis)                                         | ⬜ Pending      |
+| Spring Cloud AWS                                            | ⬜ Pending      |
+| Secrets Manager                                             | ⬜ Pending      |
+| Parameter Store                                             | ⬜ Pending      |
+| Lambda                                                      | ⬜ Pending      |
+| API Gateway                                                 | ⬜ Pending      |
+| CloudWatch                                                  | ⬜ Pending      |
 
------------------------------------------------------|-------------|
-| S3: Upload, Download, Streaming, Presigned URLs     | ✅ Complete  |
-| SQS: Async messaging, DLQ, Long polling             | ✅ Complete  |
-| SNS: Pub/Sub, Fan-out pattern, Envelope unwrapping  | ✅ Complete  |
-| DynamoDB                                            | 🔄 Upcoming |
-| Secrets Manager                                     | 🔄 Upcoming |
-| Parameter Store                                     | 🔄 Upcoming |
-| Lambda                                              | 🔄 Upcoming |
-| CloudWatch                                          | 🔄 Upcoming |
 
 ---
 
@@ -112,6 +104,11 @@ LocalStack S3                                    SNS Topic: oms-document-uploade
 - Generate presigned download URL via `GET /api/documents/presigned-download-url`
 - Generate presigned upload URL via `GET /api/documents/presigned-upload-url`
 
+### DynamoDB
+
+- Processing steps are stored in the `oms-document-processing` table, keyed by `documentKey` (partition) and `step` (sort)
+- `ProcessingStep` models a step, `ProcessingStepRepository` handles persistence, and `DynamoDbConfig` wires the client
+
 ### SQS + SNS
 
 - After upload, an event is published to the SNS topic `oms-document-uploaded`
@@ -139,7 +136,8 @@ src/main/java/com/miladsadeghi/awsdocument/
 │   ├── model/
 │   │   ├── DocumentUploadedEvent.java
 │   │   ├── FileDownloadResult.java
-│   │   └── DocumentUploadResponse.java
+│   │   ├── DocumentUploadResponse.java
+│   │   └── ProcessingStep.java
 │   ├── service/
 │   │   ├── S3StorageService.java
 │   │   └── DocumentProcessor.java
@@ -150,7 +148,9 @@ src/main/java/com/miladsadeghi/awsdocument/
     │   ├── S3Config.java
     │   ├── S3PresignerConfig.java
     │   ├── SqsConfig.java
-    │   └── SnsConfig.java
+    │   ├── SnsConfig.java
+    │   └── DynamoDbConfig.java
+    ├── ProcessingStepRepository.java
     └── sqs/
         ├── consumer/
         │   └── DocumentProcessingConsumer.java
@@ -182,7 +182,7 @@ The layers follow a clean-architecture style: `api` handles HTTP, `domain` holds
 docker compose up -d
 ```
 
-The `init/` folder contains the LocalStack setup for this project: the S3 buckets, the SQS queues (including the DLQ), and the SNS topic with its queue subscriptions. Steps 4 to 6 below are the equivalent manual commands, useful if you want to understand what the setup creates or need to recreate a single resource.
+The `init/` folder contains the LocalStack setup for this project: the S3 buckets, the SQS queues (including the DLQ), and the SNS topic with its queue subscriptions. Steps 4 to 7 below are the equivalent manual commands, useful if you want to understand what the setup creates or need to recreate a single resource.
 
 ### 2. Configure dummy AWS credentials
 
@@ -261,7 +261,25 @@ done
 
 On PowerShell, run the `awslocal sns subscribe` command once per queue, using the same flags with a backtick for line continuation.
 
-### 7. Run the application
+### 7. Create the DynamoDB table
+
+Created by `init/04-create-table-dynamodb.sh`. Manual equivalent:
+
+```bash
+awslocal dynamodb create-table \
+  --table-name oms-document-processing \
+  --attribute-definitions "AttributeName=documentKey,AttributeType=S" "AttributeName=step,AttributeType=S" \
+  --key-schema "AttributeName=documentKey,KeyType=HASH" "AttributeName=step,KeyType=RANGE" \
+  --billing-mode PAY_PER_REQUEST
+```
+
+On PowerShell, replace the `\` line continuations with a backtick.
+
+| Table                     | Partition key  | Sort key     | Billing         |
+|---------------------------|----------------|--------------|-----------------|
+| `oms-document-processing` | `documentKey` (S) | `step` (S) | `PAY_PER_REQUEST` |
+
+### 8. Run the application
 
 **PowerShell**
 
@@ -334,7 +352,7 @@ After an upload, the application log should show the `DocumentProcessor` report 
 | Problem                                   | Likely cause and fix                                                                        |
 |-------------------------------------------|---------------------------------------------------------------------------------------------|
 | `Connection refused` on port 4566         | LocalStack is not running. Run `docker compose up -d` and check `docker compose ps`         |
-| `NoSuchBucket` / `QueueDoesNotExist`      | The `init/` setup did not run, or the container was recreated. Re-run it or use steps 4 to 6 |
+| `NoSuchBucket` / `QueueDoesNotExist`      | The `init/` setup did not run, or the container was recreated. Re-run it or use steps 4 to 7 |
 | Consumer logs nothing after upload        | Check that the `oms-documents` queue is subscribed to the SNS topic (step 6)                |
 | Presigned URL does not work from outside  | The URL host must be reachable from the client, so check `AWS_ENDPOINT`                     |
 | Messages end up in the DLQ                | Processing failed 3 times. Inspect them with `awslocal sqs receive-message` on the DLQ      |
@@ -346,29 +364,34 @@ After an upload, the application log should show the `DocumentProcessor` report 
 This project is part of a structured AWS for Java Backend Developers course.
 
 ```
-Module 1  — LocalStack Fundamentals           ✅ Complete
-Module 2  — AWS CLI                           ✅ Merged into Module 1
-Module 3  — IAM basics for developers         ⏭️ Deferred (needs real AWS)
-Module 4  — S3 with Spring Boot               ✅ Complete
-Module 5  — SQS                               ✅ Complete
-Module 6  — SNS                               ✅ Complete
-Module 7  — Event-driven Architecture         ✅ Complete
-             Unit 1: Outbox pattern
-             Unit 2: Correlation IDs & MDC
+Module 1  — LocalStack Fundamentals            ✅ Complete
+Module 2  — AWS CLI                            ✅ Merged into Module 1
+Module 3  — IAM basics for developers          ⏭️ Deferred (needs real AWS)
+Module 4  — S3 with Spring Boot                ✅ Complete
+             Upload · Download & streaming · Presigned URLs
+Module 5  — SQS                                ✅ Complete
+             Queues, DLQ, long polling · Consumer · Deserialization
+Module 6  — SNS                                ✅ Complete
+             Fan-out · Envelope unwrapping
+Module 7  — Event-driven Architecture          ✅ Complete
+             Outbox pattern · Correlation IDs & MDC
+Module 8  — DynamoDB                           ✅ Complete
+             Key design, Query vs Scan, GSI · Idempotent consumer
 ────────────────────────────────────────────────────────
-Module 8  — DynamoDB                          🔄 Next
-Module 9  — RDS with Spring Boot              ➕ Added
-Module 10 — Spring Cloud AWS                  ⬜ Pending
-Module 11 — Secrets Manager                   ⬜ Pending
-Module 12 — Parameter Store                   ⬜ Pending
-Module 13 — Lambda for Java developers        ⬜ Pending
-Module 14 — API Gateway                       ⬜ Pending
-Module 15 — CloudWatch logging & monitoring   ⬜ Pending
-Module 16 — Infrastructure basics             ⬜ Pending
-Module 17 — Deploying Spring Boot (incl. EC2) ⬜ Pending
-Module 18 — Testing AWS integrations          ⬜ Pending
-Module 19 — Performance optimization          ⬜ Pending
-Module 20 — Final production project          ⬜ Pending
+Module 9  — RDS with Spring Boot               🔄 In progress
+             Unit 1: Production-ready PostgreSQL setup (tasks A, B, C assigned)
+Module 10 — ElastiCache (Redis)                ➕ Added, not started
+Module 11 — Spring Cloud AWS                   ⬜
+Module 12 — Secrets Manager                    ⬜
+Module 13 — Parameter Store                    ⬜
+Module 14 — Lambda for Java developers         ⬜
+Module 15 — API Gateway                        ⬜
+Module 16 — CloudWatch logging & monitoring    ⬜
+Module 17 — Infrastructure basics              ⬜
+Module 18 — Deploying Spring Boot (incl. EC2)  ⬜
+Module 19 — Testing AWS integrations           ⬜
+Module 20 — Performance optimization          ⬜
+Module 21 — Final production project           ⬜
 ────────────────────────────────────────────────────────
-Progress:  6 / 20 modules done  ▓▓▓▓▓▓░░░░░░░░░░░░░░  30%
+Progress:  7 of 21 modules done   ▓▓▓▓▓▓▓░░░░░░░░░░░░░░  33%
 ```

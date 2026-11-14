@@ -44,12 +44,13 @@ public class DocumentProcessor {
 
     log.info("Size:        {} bytes", metadata.contentLength());
     log.info("ContentType: {}", metadata.contentType());
+    log.info("=== Processing complete ===");
+
     ProcessingStep processingStep = new ProcessingStep(event.documentKey(), "METADATA", "DONE", Instant.now().toString());
     boolean saved = processingStepRepository.saveIfNotExists(processingStep);
     if (!saved){
       log.info("Step was saved by another delivery — key: {}", event.documentKey());
     }
-    log.info("=== Processing complete ===");
 
   }
 

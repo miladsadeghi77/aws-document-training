@@ -1,6 +1,12 @@
 logging:
   pattern:
     level: "%5p [%X{correlationId:-}]"
+  level:
+#    root: INFO
+#    org.springframework.web: DEBUG
+#    com.amazonaws: DEBUG
+    com.zaxxer.hikari: DEBUG
+
 spring:
   application.name: aws-document
   task:
@@ -8,13 +14,23 @@ spring:
       pool:
         size: 3
   datasource:
-    url: jdbc:postgresql://localhost:5436/oms
-    username: oms
-    password: oms
+      url: jdbc:postgresql://localhost:5436/oms
+      username: oms
+      password: oms
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 3000
+        max-lifetime: 1800000
+        leak-detection-threshold: 20000
+#    url: jdbc:postgresql://localhost:5436/oms
+#    username: oms
+#    password: oms
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: true
+    open-in-view: false
 aws:
   sns:
     topic-arn: ${SNS_TOPIC_ARN:arn:aws:sns:us-east-1:000000000000:oms-document-uploaded}

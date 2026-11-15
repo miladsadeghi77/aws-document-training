@@ -94,6 +94,19 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>dynamodb</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+      <scope>compile</scope>
+      <version>4.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <version>13.2.0</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>

@@ -1,6 +1,7 @@
 package com.miladsadeghi.awsdocument.api.Controller;
 
 import com.miladsadeghi.awsdocument.api.dto.DocumentUploadResponse;
+import com.miladsadeghi.awsdocument.domain.model.DocumentMetadata;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
 import com.miladsadeghi.awsdocument.domain.usecase.DocumentUseCase;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,6 +62,11 @@ public class DocumentController {
     String url = documentUseCase.getUploadUrlDocument(filename);
     return ResponseEntity.ok(url);
   }
+  @GetMapping("/metadata")
+  public ResponseEntity<DocumentMetadata> metadata(@RequestParam String key) {
+    return ResponseEntity.ok(documentUseCase.getMetadata(key));
+  }
+
   private String extractKey(HttpServletRequest request) {
     String path = request.getRequestURI();
     return path.substring(path.indexOf("/download/") + "/download/".length());

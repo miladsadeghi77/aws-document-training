@@ -31,6 +31,11 @@ spring:
       ddl-auto: validate
     show-sql: true
     open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6380
+      timeout: 500ms
 aws:
   sns:
     topic-arn: ${SNS_TOPIC_ARN:arn:aws:sns:us-east-1:000000000000:oms-document-uploaded}

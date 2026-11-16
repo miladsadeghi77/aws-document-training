@@ -2,8 +2,10 @@ package com.miladsadeghi.awsdocument.domain.usecase;
 
 import com.miladsadeghi.awsdocument.common.logging.CorrelationContext;
 import com.miladsadeghi.awsdocument.domain.exception.StorageException;
+import com.miladsadeghi.awsdocument.domain.model.DocumentMetadata;
 import com.miladsadeghi.awsdocument.domain.model.DocumentUploadedEvent;
 import com.miladsadeghi.awsdocument.domain.model.FileDownloadResult;
+import com.miladsadeghi.awsdocument.domain.service.DocumentMetadataService;
 import com.miladsadeghi.awsdocument.domain.service.S3StorageService;
 import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.Document;
 import com.miladsadeghi.awsdocument.infrastracture.persistance.entity.OutboxEvent;
@@ -28,19 +30,21 @@ public class DocumentUseCase {
   private final S3StorageService s3StorageService;
   private final DocumentRepository documentRepository;
   private final OutboxEventRepository outboxEventRepository;
+  private final DocumentMetadataService documentMetadataService;
   private final ObjectMapper objectMapper;
   private final String bucket;
 
   public DocumentUseCase(
       S3StorageService s3StorageService,
       DocumentRepository documentRepository,
-      OutboxEventRepository outboxEventRepository,
+      OutboxEventRepository outboxEventRepository, DocumentMetadataService documentMetadataService,
       ObjectMapper objectMapper,
-      @Value("${aws.s3.bucket}")  String bucket) {
+      @Value("${aws.s3.bucket}") String bucket) {
 
     this.s3StorageService = s3StorageService;
     this.documentRepository = documentRepository;
     this.outboxEventRepository = outboxEventRepository;
+    this.documentMetadataService = documentMetadataService;
     this.bucket = bucket;
     this.objectMapper = objectMapper;
   }
@@ -78,19 +82,24 @@ public class DocumentUseCase {
     }
     return s3StorageService.download(key);
   }
+
   public String getDownloadUrlDocument(String key) {
     if (key == null || key.isBlank()) {
       throw new IllegalArgumentException("Document key must not be empty");
     }
-    return s3StorageService.generateDownloadUrl(key , Duration.ofMinutes(10));
+    return s3StorageService.generateDownloadUrl(key, Duration.ofMinutes(10));
   }
 
-  public String getUploadUrlDocument(String filename){
+  public String getUploadUrlDocument(String filename) {
     if (filename == null || filename.isBlank()) {
       throw new IllegalArgumentException("Filename must not be empty");
     }
     String key = generateKey(filename);
     return s3StorageService.generateUploadUrl(key, Duration.ofMinutes(10));
+  }
+
+  public DocumentMetadata getMetadata(String key) {
+    return documentMetadataService.getMetadata(key);
   }
 
   private void validateFile(MultipartFile file) {
